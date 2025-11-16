@@ -1,0 +1,12 @@
+.{
+    .name = .haversine,
+    .version = "0.0.0",
+    .fingerprint = 0xb14a73437a0ec906,
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
