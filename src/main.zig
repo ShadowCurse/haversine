@@ -1,9 +1,30 @@
 const std = @import("std");
 const haversine = @import("haversine");
 
+const profiler = @import("profiler.zig");
 const Json = @import("json.zig");
 
+pub const profiler_options = profiler.Options{
+    .enabled = true,
+};
+
+pub const prof = profiler.Measurements(&.{
+    "json parse",
+    "haversine",
+    "main2",
+});
+
 pub fn main() !void {
+    profiler.start();
+
+    try main2();
+    prof.print();
+}
+
+pub fn main2() !void {
+    const prof_point = prof.start(@src());
+    defer prof.end(prof_point);
+
     const args = std.os.argv;
     if (args.len != 2) {
         std.log.err("Incorrect number of args: {d}/1", .{args.len - 1});
@@ -59,6 +80,8 @@ pub fn main() !void {
     _ = try expect_token_type(&parser, .array_start);
 
     while (true) {
+        const prof_json = prof.start_named("json parse");
+        defer prof.end(prof_json);
         if (parser.peek_array_end()) break;
 
         const pair = try Pair.from_json_parser(&parser);
@@ -66,19 +89,23 @@ pub fn main() !void {
         pair_index += 1;
     }
 
-    var average: f64 = 0.0;
-    for (pairs[0..pair_index]) |pair| {
-        const dist = haversine.haversine(
-            pair.x0,
-            pair.y0,
-            pair.x1,
-            pair.y1,
-            haversine.EARTH_RADIUS,
-        );
-        average += dist;
+    {
+        const prof_haversine = prof.start_named("haversine");
+        defer prof.end(prof_haversine);
+        var average: f64 = 0.0;
+        for (pairs[0..pair_index]) |pair| {
+            const dist = haversine.haversine(
+                pair.x0,
+                pair.y0,
+                pair.x1,
+                pair.y1,
+                haversine.EARTH_RADIUS,
+            );
+            average += dist;
+        }
+        average /= @floatFromInt(pair_index);
+        std.log.info("Average: {d} of {d} pairs", .{ average, pair_index });
     }
-    average /= @floatFromInt(pair_index);
-    std.log.info("Average: {d} of {d} pairs", .{ average, pair_index });
 }
 
 pub fn statx(fd: std.posix.fd_t) !std.os.linux.Statx {
