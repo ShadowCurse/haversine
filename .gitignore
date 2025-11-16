@@ -7,3 +7,5 @@ zig-out/
 /docgen_tmp/
 .envrc
 .direnv
+*.txt
+*.json
