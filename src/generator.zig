@@ -72,7 +72,8 @@ pub fn main() !void {
         }
     }
     average /= @floatFromInt(num_pairs);
-    try write_file(answer_file_fd, "average: {d}\n", .{average});
+    try write_file(answer_file_fd, "Average: {d} of {d} pairs", .{ average, num_pairs });
+    std.log.info("Average: {d} of {d} pairs", .{ average, num_pairs });
 }
 
 fn open_file(name: []const u8, ext: []const u8, num_pairs: u64) !std.posix.fd_t {
@@ -91,7 +92,7 @@ fn open_file(name: []const u8, ext: []const u8, num_pairs: u64) !std.posix.fd_t 
 
     const fd = std.posix.open(
         file_name,
-        .{ .ACCMODE = .RDWR, .CREAT = true, .TRUNC = true },
+        .{ .ACCMODE = .WRONLY, .CREAT = true, .TRUNC = true },
         std.os.linux.S.IRWXU,
     ) catch |e| {
         std.log.err("Error openning the file {s}: {t}", .{ file_name, e });
