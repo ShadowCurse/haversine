@@ -63,6 +63,7 @@ pub const Measurement = struct {
     without_children: u64 = 0,
     with_children: u64 = 0,
     hit_count: u64 = 0,
+    bytes_count: u64 = 0,
 };
 
 pub fn start() void {
@@ -108,10 +109,15 @@ pub fn Measurements(comptime FILE: []const u8, comptime NAMES: []const []const u
                     .current_with_children = current.?.with_children,
                 };
             }
+
             pub fn end(point: Point) void {
+                end_with_bytes(point, 0);
+            }
+            pub fn end_with_bytes(point: Point, bytes: u64) void {
                 const end_time = get_perf_counter();
                 const elapsed = end_time - point.start_time;
                 point.current.hit_count += 1;
+                point.current.bytes_count += bytes;
                 point.current.without_children +%= elapsed;
                 point.current.with_children = point.current_with_children + elapsed;
                 if (point.parent) |parent| parent.without_children -%= elapsed;
@@ -131,8 +137,11 @@ pub fn Measurements(comptime FILE: []const u8, comptime NAMES: []const []const u
                         @as(f64, @floatFromInt(m.with_children)) / freq;
                     const with_children: f64 =
                         @as(f64, @floatFromInt(m.with_children)) / global_elapsed * 100.0;
+                    const bytes_per_second: f64 =
+                        @as(f64, @floatFromInt(m.bytes_count)) / with_children_t;
+                    const gigabytes_per_second = bytes_per_second / (1024.0 * 1024.0 * 1024.0);
                     std.log.info(
-                        "{s}: {s:>20}: hit: {d:>6} exclusive: {d:>6.2}s ({d:>6.2}%) inclusive: {d:>6.2}s ({d:>6.2}%)",
+                        "{s}:{s:<10} | hit: {d:>10} | exclusive: {d:>6.2}s ({d:>6.2}%) | inclusive: {d:>6.2}s ({d:>6.2}%) | throughput: {d:>6.2} Gbps",
                         .{
                             FILE,
                             name,
@@ -141,6 +150,7 @@ pub fn Measurements(comptime FILE: []const u8, comptime NAMES: []const []const u
                             without_children,
                             with_children_t,
                             with_children,
+                            gigabytes_per_second,
                         },
                     );
                 }

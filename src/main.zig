@@ -82,7 +82,8 @@ pub fn main2() !void {
 
     {
         const prof_json = prof.start_named("json parse");
-        defer prof.end(prof_json);
+        defer prof.end_with_bytes(prof_json, file_mem.len);
+
         while (true) {
             if (parser.peek_array_end()) break;
 
@@ -94,7 +95,8 @@ pub fn main2() !void {
 
     {
         const prof_haversine = prof.start_named("haversine");
-        defer prof.end(prof_haversine);
+        defer prof.end_with_bytes(prof_haversine, @sizeOf(Pair) * pair_index);
+
         var average: f64 = 0.0;
         for (pairs[0..pair_index]) |pair| {
             const dist = haversine.haversine(
