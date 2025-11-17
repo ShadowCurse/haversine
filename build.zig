@@ -1,9 +1,10 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const use_llvm = if (optimize == .ReleaseFast)
+    const use_llvm = if (optimize == .ReleaseFast or builtin.cpu.arch == .aarch64)
         true
     else
         b.option(bool, "use_llvm", "Use LLVM backend") != null;

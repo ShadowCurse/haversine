@@ -17,6 +17,8 @@ else
 
 pub const get_perf_counter = if (builtin.cpu.arch == .x86_64)
     rdtc
+else if (builtin.cpu.arch == .aarch64)
+    cntvct_el0
 else
     @compileError("Only x86_64 is supported");
 
@@ -31,11 +33,30 @@ fn rdtc() u64 {
     return (high << 32) | low;
 }
 
-fn get_perf_counter_frequency() u64 {
+fn cntvct_el0() u64 {
+    return asm volatile ("mrs %[ret], cntvct_el0"
+        : [ret] "=r" (-> u64),
+    );
+}
+
+pub const get_perf_counter_frequency = if (builtin.cpu.arch == .x86_64)
+    tsc_freq
+else if (builtin.cpu.arch == .aarch64)
+    cntfrq_el0
+else
+    @compileError("Only x86_64 is supported");
+
+fn tsc_freq() u64 {
     const s = get_perf_counter();
     std.Thread.sleep(1000_000);
     const e = get_perf_counter();
     return (e - s) * 1000;
+}
+
+fn cntfrq_el0() u64 {
+    return asm volatile ("mrs %[ret], cntfrq_el0"
+        : [ret] "=r" (-> u64),
+    );
 }
 
 pub const Measurement = struct {
