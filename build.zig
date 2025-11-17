@@ -3,7 +3,10 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const use_llvm = b.option(bool, "use_llvm", "Use LLVM backend") != null;
+    const use_llvm = if (optimize == .ReleaseFast)
+        true
+    else
+        b.option(bool, "use_llvm", "Use LLVM backend") != null;
 
     const h_mod = b.addModule("haversine", .{
         .root_source_file = b.path("src/root.zig"),
