@@ -49,11 +49,13 @@ pub fn start() void {
     global_start = get_perf_counter();
 }
 
-pub fn Measurements(comptime NAMES: []const []const u8) type {
+pub fn Measurements(comptime FILE: []const u8, comptime NAMES: []const []const u8) type {
     return if (!options.enabled)
         struct {
             pub fn start(comptime _: std.builtin.SourceLocation) void {}
+            pub fn start_named(comptime _: []const u8) void {}
             pub fn end(_: void) void {}
+            pub fn print() void {}
         }
     else
         struct {
@@ -97,7 +99,6 @@ pub fn Measurements(comptime NAMES: []const []const u8) type {
 
             pub fn print() void {
                 const freq: f64 = @floatFromInt(global_freq);
-                std.log.info("Counter frequency: {d:.2}", .{freq});
                 const global_end = get_perf_counter();
                 const global_elapsed: f64 = @floatFromInt(global_end - global_start);
                 for (NAMES, measurements) |name, m| {
@@ -110,8 +111,9 @@ pub fn Measurements(comptime NAMES: []const []const u8) type {
                     const with_children: f64 =
                         @as(f64, @floatFromInt(m.with_children)) / global_elapsed * 100.0;
                     std.log.info(
-                        "{s}: hit: {d} exclusive: {d:.2}s ({d:.2}%) inclusive: {d:.2}s ({d:.2}%)",
+                        "{s}: {s:>20}: hit: {d:>6} exclusive: {d:>6.2}s ({d:>6.2}%) inclusive: {d:>6.2}s ({d:>6.2}%)",
                         .{
+                            FILE,
                             name,
                             m.hit_count,
                             without_children_t,
@@ -123,4 +125,17 @@ pub fn Measurements(comptime NAMES: []const []const u8) type {
                 }
             }
         };
+}
+
+pub fn print(comptime types: []const type) void {
+    std.log.info("Counter frequency: {d}", .{global_freq});
+
+    inline for (types) |t|
+        t.print();
+
+    const freq: f64 = @floatFromInt(global_freq);
+    const global_end = get_perf_counter();
+    const global_elapsed: f64 = @floatFromInt(global_end - global_start);
+    const global_time = global_elapsed / freq;
+    std.log.info("Total {d:>6.2}s ({d})", .{ global_time, global_elapsed });
 }

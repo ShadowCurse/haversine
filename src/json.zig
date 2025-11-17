@@ -1,4 +1,9 @@
 const std = @import("std");
+const profiler = @import("profiler.zig");
+
+pub const prof = profiler.Measurements("json", &.{
+    "next",
+});
 
 buffer: []const u8,
 
@@ -29,6 +34,9 @@ pub fn init(buffer: []const u8) Self {
 }
 
 pub fn next(self: *Self) ?Token {
+    const prof_point = prof.start(@src());
+    defer prof.end(prof_point);
+
     self.skip_not_usefull();
     if (self.buffer.len == 0) return null;
     switch (self.buffer[0]) {
@@ -88,4 +96,3 @@ fn skip_not_usefull(self: *Self) void {
         if (self.buffer.len == 0) return;
     }
 }
-

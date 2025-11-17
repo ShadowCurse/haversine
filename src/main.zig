@@ -8,7 +8,7 @@ pub const profiler_options = profiler.Options{
     .enabled = true,
 };
 
-pub const prof = profiler.Measurements(&.{
+pub const prof = profiler.Measurements("main", &.{
     "json parse",
     "haversine",
     "main2",
@@ -18,7 +18,8 @@ pub fn main() !void {
     profiler.start();
 
     try main2();
-    prof.print();
+
+    profiler.print(&.{ prof, Json.prof });
 }
 
 pub fn main2() !void {
@@ -79,14 +80,16 @@ pub fn main2() !void {
     _ = try expect_token_type(&parser, .string);
     _ = try expect_token_type(&parser, .array_start);
 
-    while (true) {
+    {
         const prof_json = prof.start_named("json parse");
         defer prof.end(prof_json);
-        if (parser.peek_array_end()) break;
+        while (true) {
+            if (parser.peek_array_end()) break;
 
-        const pair = try Pair.from_json_parser(&parser);
-        pairs[pair_index] = pair;
-        pair_index += 1;
+            const pair = try Pair.from_json_parser(&parser);
+            pairs[pair_index] = pair;
+            pair_index += 1;
+        }
     }
 
     {
