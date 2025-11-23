@@ -62,8 +62,7 @@ json_next :: proc(json: ^Json) -> JsonToken {
         return {.array_end, {}}
     case '"':
         string_end_index: int = 1
-        for json.buffer[string_end_index] != '"' &&
-            string_end_index < len(json.buffer) {
+        for json.buffer[string_end_index] != '"' && string_end_index < len(json.buffer) {
             string_end_index += 1
         }
         token: JsonToken = {.string, string(json.buffer[1:string_end_index])}

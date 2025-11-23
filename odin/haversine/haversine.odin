@@ -21,9 +21,7 @@ haversine :: proc(x0: f64, y0: f64, x1: f64, y1: f64, radius: f64) -> f64 {
 
     a :=
         (math.sin(d_lat / 2.0) * math.sin(d_lat / 2.0)) +
-        math.cos(lat_1) *
-            math.cos(lat_2) *
-            (math.sin(d_lon / 2) * math.sin(d_lon / 2))
+        math.cos(lat_1) * math.cos(lat_2) * (math.sin(d_lon / 2) * math.sin(d_lon / 2))
     c := 2.0 * math.asin(math.sqrt(a))
 
     return radius * c

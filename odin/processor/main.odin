@@ -20,11 +20,7 @@ main :: proc() {
     errno: os.Error = ---
     file_fd, errno = os.open(file_name, os.O_RDONLY, 0)
     if errno != .NONE {
-        fmt.eprintfln(
-            "Error openning the file %s: %s",
-            file_name,
-            os.error_string(errno),
-        )
+        fmt.eprintfln("Error openning the file %s: %s", file_name, os.error_string(errno))
         return
     }
     defer os.close(file_fd)
@@ -32,10 +28,7 @@ main :: proc() {
     file_size: i64 = ---
     file_size, errno = os.file_size(file_fd)
     if errno != .NONE {
-        fmt.eprintfln(
-            "Error getting the file size: %s",
-            os.error_string(errno),
-        )
+        fmt.eprintfln("Error getting the file size: %s", os.error_string(errno))
         return
     }
 
@@ -65,10 +58,7 @@ main :: proc() {
         0,
     )
     if file_mem == nil {
-        fmt.eprintfln(
-            "Error mmaping the pair buffer: %s",
-            os.error_string(errno),
-        )
+        fmt.eprintfln("Error mmaping the pair buffer: %s", os.error_string(errno))
         return
     }
     pair_index: u32 = 0
@@ -95,13 +85,7 @@ main :: proc() {
 
     average: f64 = ---
     for pair in pairs[0:pair_index] {
-        dist := haversine.haversine(
-            pair.x0,
-            pair.y0,
-            pair.x1,
-            pair.y1,
-            haversine.EARTH_RADIUS,
-        )
+        dist := haversine.haversine(pair.x0, pair.y0, pair.x1, pair.y1, haversine.EARTH_RADIUS)
         average += dist
     }
     average /= cast(f64)pair_index
@@ -117,11 +101,7 @@ expect_token_type :: proc(
 ) #optional_ok {
     token := json_next(parser)
     if token.type != token_type {
-        fmt.eprintfln(
-            "Got invalid token %s while expectind %s",
-            token.type,
-            token_type,
-        )
+        fmt.eprintfln("Got invalid token %s while expectind %s", token.type, token_type)
         return token, false
     }
     return token, true
@@ -135,13 +115,7 @@ Pair :: struct {
 }
 
 pair_from_json :: proc(parser: ^Json) -> (Pair, bool) {
-    pair_field_from_json :: proc(
-        parser: ^Json,
-        field_name: string,
-    ) -> (
-        f64,
-        bool,
-    ) {
+    pair_field_from_json :: proc(parser: ^Json, field_name: string) -> (f64, bool) {
         ok: bool = ---
         token: JsonToken = ---
         if token, ok = expect_token_type(parser, .string); !ok do return 0.0, false
