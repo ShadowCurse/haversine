@@ -9,6 +9,17 @@ import "core:sys/linux"
 import "../haversine"
 
 main :: proc() {
+    profile_start()
+
+    main2()
+
+    profile_end()
+}
+
+main2 :: proc() {
+    perf_main := profile_point_start(0)
+    defer profile_point_end(perf_main, "main")
+
     args := os.args
     if len(args) != 2 {
         fmt.eprintfln("Incorrect number of args: %d/1", len(args) - 1)
@@ -73,23 +84,34 @@ main :: proc() {
     if _, ok := expect_token_type(&parser, .string); !ok do return
     if _, ok := expect_token_type(&parser, .array_start); !ok do return
 
-    for {
-        if json_peek_array_end(&parser) do break
+    {
+        perf_json := profile_point_start(1)
+        defer profile_point_end(perf_json, "json parse", len(json_text))
 
-        pair, ok := pair_from_json(&parser)
-        if !ok do return
+        for {
 
-        pairs[pair_index] = pair
-        pair_index += 1
+            if json_peek_array_end(&parser) do break
+
+            pair, ok := pair_from_json(&parser)
+            if !ok do return
+
+            pairs[pair_index] = pair
+            pair_index += 1
+        }
     }
 
-    average: f64 = ---
-    for pair in pairs[0:pair_index] {
-        dist := haversine.haversine(pair.x0, pair.y0, pair.x1, pair.y1, haversine.EARTH_RADIUS)
-        average += dist
+    {
+        perf_h := profile_point_start(2)
+        defer profile_point_end(perf_h, "haversine", size_of(Pair) * pair_index)
+
+        average: f64 = ---
+        for pair in pairs[0:pair_index] {
+            dist := haversine.haversine(pair.x0, pair.y0, pair.x1, pair.y1, haversine.EARTH_RADIUS)
+            average += dist
+        }
+        average /= cast(f64)pair_index
+        fmt.printfln("Average: %.12f of %d pairs", average, pair_index)
     }
-    average /= cast(f64)pair_index
-    fmt.printfln("Average: %.12f of %d pairs", average, pair_index)
 }
 
 expect_token_type :: proc(
