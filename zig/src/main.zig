@@ -89,6 +89,32 @@ pub fn main2() !void {
                 .{ result.individual_errors, pair_index, result.final_sum_error },
             );
     }
+    const ranges = loop_find_ranges(pairs[0..pair_index]);
+    std.log.info("Input/Output ranges:", .{});
+    std.log.info("in_sin:  {d:>6.3} ..{d:>6.3} out_sin:  {d:>6.3} ..{d:>6.3}", .{
+        ranges.in_sin.min,
+        ranges.in_sin.max,
+        ranges.out_sin.min,
+        ranges.out_sin.max,
+    });
+    std.log.info("in_cos:  {d:>6.3} ..{d:>6.3} out_cos:  {d:>6.3} ..{d:>6.3}", .{
+        ranges.in_cos.min,
+        ranges.in_cos.max,
+        ranges.out_cos.min,
+        ranges.out_cos.max,
+    });
+    std.log.info("in_asin: {d:>6.3} ..{d:>6.3} out_asin: {d:>6.3} ..{d:>6.3}", .{
+        ranges.in_asin.min,
+        ranges.in_asin.max,
+        ranges.out_asin.min,
+        ranges.out_asin.max,
+    });
+    std.log.info("in_sqrt: {d:>6.3} ..{d:>6.3} out_sqrt: {d:>6.3} ..{d:>6.3}", .{
+        ranges.in_sqrt.min,
+        ranges.in_sqrt.max,
+        ranges.out_sqrt.min,
+        ranges.out_sqrt.max,
+    });
 }
 
 fn loop_sum(pairs: []const Pair) f64 {
@@ -134,6 +160,21 @@ fn loop_verify(pairs: []const Pair, answers: []const f64) VerifyResult {
         .individual_errors = individual_errors,
         .final_sum_error = final_sum_error,
     };
+}
+
+fn loop_find_ranges(pairs: []const Pair) haversine.MathRanges {
+    var ranges: haversine.MathRanges = .{};
+    for (pairs) |pair| {
+        _ = haversine.haversine_with_ranges(
+            pair.x0,
+            pair.y0,
+            pair.x1,
+            pair.y1,
+            haversine.EARTH_RADIUS,
+            &ranges,
+        );
+    }
+    return ranges;
 }
 
 fn close_values(a: f64, b: f64) bool {
