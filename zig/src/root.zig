@@ -2,6 +2,22 @@ const std = @import("std");
 
 pub const EARTH_RADIUS = 6372.8;
 
+fn sin(input: f64) f64 {
+    return input;
+}
+
+fn cos(input: f64) f64 {
+    return input;
+}
+
+fn asin(input: f64) f64 {
+    return input;
+}
+
+fn sqrt(input: f64) f64 {
+    return input;
+}
+
 pub fn radians_from_degrees(degrees: f64) f64 {
     return degrees / 360.0 * std.math.pi * 2.0;
 }
@@ -95,4 +111,80 @@ pub fn haversine_with_ranges(
     const c = 2.0 * ranges.asin(ranges.sqrt(a));
 
     return radius * c;
+}
+
+test "sin_accuracy" {
+    const MIN = -3.142;
+    const MAX = 3.142;
+    const SAMPLES = 1000_000;
+
+    const D = MAX - MIN;
+    var max_diff: f64 = 0.0;
+    for (0..SAMPLES) |i| {
+        const progress: f64 = @as(f64, @floatFromInt(i)) / SAMPLES;
+        const value = MIN + D * progress;
+
+        const original = @sin(value);
+        const custom = sin(value);
+        const diff = custom - original;
+        max_diff = @max(max_diff, diff);
+    }
+    std.debug.print("sin max_diff: {d:.24}\n", .{max_diff});
+}
+
+test "cos_accuracy" {
+    const MIN = -1.571;
+    const MAX = 1.571;
+    const SAMPLES = 1000_000;
+
+    const D = MAX - MIN;
+    var max_diff: f64 = 0.0;
+    for (0..SAMPLES) |i| {
+        const progress: f64 = @as(f64, @floatFromInt(i)) / SAMPLES;
+        const value = MIN + D * progress;
+
+        const original = @cos(value);
+        const custom = cos(value);
+        const diff = custom - original;
+        max_diff = @max(max_diff, diff);
+    }
+    std.debug.print("cos max_diff: {d:.24}\n", .{max_diff});
+}
+
+test "asin_accuracy" {
+    const MIN = 0.0;
+    const MAX = 1.0;
+    const SAMPLES = 1000_000;
+
+    const D = MAX - MIN;
+    var max_diff: f64 = 0.0;
+    for (0..SAMPLES) |i| {
+        const progress: f64 = @as(f64, @floatFromInt(i)) / SAMPLES;
+        const value = MIN + D * progress;
+
+        const original = std.math.asin(value);
+        const custom = asin(value);
+        const diff = custom - original;
+        max_diff = @max(max_diff, diff);
+    }
+    std.debug.print("asin max_diff: {d:.24}\n", .{max_diff});
+}
+
+test "sqrt_accuracy" {
+    const MIN = 0.0;
+    const MAX = 1.0;
+    const SAMPLES = 1000_000;
+
+    const D = MAX - MIN;
+    var max_diff: f64 = 0.0;
+    for (0..SAMPLES) |i| {
+        const progress: f64 = @as(f64, @floatFromInt(i)) / SAMPLES;
+        const value = MIN + D * progress;
+
+        const original = @sqrt(value);
+        const custom = sqrt(value);
+        const diff = custom - original;
+        max_diff = @max(max_diff, diff);
+    }
+    std.debug.print("sqrt max_diff: {d:.24}\n", .{max_diff});
 }
