@@ -27,44 +27,23 @@ pub fn main2() !void {
     defer prof.end(prof_point);
 
     const args = std.os.argv;
-    if (args.len != 2) {
-        std.log.err("Incorrect number of args: {d}/1", .{args.len - 1});
+    if (args.len < 2 or 3 < args.len) {
+        std.log.err("Incorrect number of args: {d}.", .{args.len - 1});
         return;
     }
-    const file_path = std.mem.span(args[1]);
+    const input_path = std.mem.span(args[1]);
+    const answers_path = if (args.len == 3) std.mem.span(args[2]) else null;
 
-    const file_fd = std.posix.open(file_path, .{ .ACCMODE = .RDONLY }, 0) catch |e| {
-        std.log.err("Error openning the file {s}: {t}", .{ file_path, e });
-        return e;
-    };
-    defer std.posix.close(file_fd);
+    const input_file_mem = try mmap_file(input_path);
+    const answers_file_mem = if (answers_path) |ap| try mmap_file(ap) else null;
+    const answers = if (answers_file_mem) |afm| @as([]const f64, @ptrCast(afm)) else null;
 
-    const s = statx(file_fd) catch |e| {
-        std.log.err("Error getting file stats: {t}", .{e});
-        return e;
-    };
-
-    const file_mem = std.posix.mmap(
-        null,
-        s.size,
-        std.posix.PROT.READ,
-        .{ .TYPE = .PRIVATE },
-        file_fd,
-        0,
-    ) catch |e| {
-        std.log.err("Error mmaping the file: {t}", .{e});
-        return e;
-    };
-
-    const max_pairs_bytes = s.size & ~(@as(u64, @sizeOf(Pair)) - 1);
+    const max_pairs_bytes = input_file_mem.len & ~(@as(u64, @sizeOf(Pair)) - 1);
     const pair_buffer_mem = std.posix.mmap(
         null,
         max_pairs_bytes,
         std.posix.PROT.READ | std.posix.PROT.WRITE,
-        .{
-            .TYPE = .PRIVATE,
-            .ANONYMOUS = true,
-        },
+        .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
         -1,
         0,
     ) catch |e| {
@@ -74,7 +53,7 @@ pub fn main2() !void {
     var pair_index: u32 = 0;
     const pairs: []Pair = @ptrCast(pair_buffer_mem);
 
-    var parser: Json = .init(file_mem);
+    var parser: Json = .init(input_file_mem);
 
     _ = try expect_token_type(&parser, .object_start);
     _ = try expect_token_type(&parser, .string);
@@ -82,7 +61,7 @@ pub fn main2() !void {
 
     {
         const prof_json = prof.start_named("json parse");
-        defer prof.end_with_bytes(prof_json, file_mem.len);
+        defer prof.end_with_bytes(prof_json, input_file_mem.len);
 
         while (true) {
             if (parser.peek_array_end()) break;
@@ -93,27 +72,104 @@ pub fn main2() !void {
         }
     }
 
-    {
+    const sum = blk: {
         const prof_haversine = prof.start_named("haversine");
         defer prof.end_with_bytes(prof_haversine, @sizeOf(Pair) * pair_index);
 
-        var average: f64 = 0.0;
-        for (pairs[0..pair_index]) |pair| {
-            const dist = haversine.haversine(
-                pair.x0,
-                pair.y0,
-                pair.x1,
-                pair.y1,
-                haversine.EARTH_RADIUS,
+        const sum = loop_sum(pairs[0..pair_index]);
+        break :blk sum;
+    };
+    const average = sum / @as(f64, @floatFromInt(pair_index));
+    std.log.info("Average: {d} of {d} pairs", .{ average, pair_index });
+    if (answers) |ans| {
+        const result = loop_verify(pairs[0..pair_index], ans);
+        if (result.has_errors())
+            std.log.info(
+                "Individual erros: {d}/{d} Final sum error: {}",
+                .{ result.individual_errors, pair_index, result.final_sum_error },
             );
-            average += dist;
-        }
-        average /= @floatFromInt(pair_index);
-        std.log.info("Average: {d} of {d} pairs", .{ average, pair_index });
     }
 }
 
-pub fn statx(fd: std.posix.fd_t) !std.os.linux.Statx {
+fn loop_sum(pairs: []const Pair) f64 {
+    var sum: f64 = 0.0;
+    for (pairs) |pair| {
+        const dist = haversine.haversine(
+            pair.x0,
+            pair.y0,
+            pair.x1,
+            pair.y1,
+            haversine.EARTH_RADIUS,
+        );
+        sum += dist;
+    }
+    return sum;
+}
+
+const VerifyResult = struct {
+    individual_errors: u64,
+    final_sum_error: bool,
+
+    fn has_errors(self: *const VerifyResult) bool {
+        return self.individual_errors != 0 or self.final_sum_error;
+    }
+};
+fn loop_verify(pairs: []const Pair, answers: []const f64) VerifyResult {
+    var sum: f64 = 0.0;
+    var individual_errors: u64 = 0;
+    for (pairs, 0..) |pair, i| {
+        const dist = haversine.haversine(
+            pair.x0,
+            pair.y0,
+            pair.x1,
+            pair.y1,
+            haversine.EARTH_RADIUS,
+        );
+        sum += dist;
+        if (!close_values(dist, answers[i])) individual_errors += 1;
+    }
+    const average = sum / @as(f64, @floatFromInt(pairs.len));
+    const final_sum_error = !close_values(average, answers[answers.len - 1]);
+    return .{
+        .individual_errors = individual_errors,
+        .final_sum_error = final_sum_error,
+    };
+}
+
+fn close_values(a: f64, b: f64) bool {
+    const EPSILON = 0.000000001;
+    const diff = a - b;
+    return -EPSILON < diff and diff < EPSILON;
+}
+
+fn mmap_file(path: []const u8) ![]align(std.heap.page_size_min) u8 {
+    const file_fd = std.posix.open(path, .{ .ACCMODE = .RDWR }, 0) catch |e| {
+        std.log.err("Error openning the file {s}: {t}", .{ path, e });
+        return e;
+    };
+    defer std.posix.close(file_fd);
+
+    const file_stat = statx(file_fd) catch |e| {
+        std.log.err("Error getting file stats: {t}", .{e});
+        return e;
+    };
+
+    const file_mem = std.posix.mmap(
+        null,
+        file_stat.size,
+        std.posix.PROT.READ | std.posix.PROT.WRITE,
+        .{ .TYPE = .PRIVATE },
+        file_fd,
+        0,
+    ) catch |e| {
+        std.log.err("Error mmaping the input file: {t}", .{e});
+        return e;
+    };
+
+    return file_mem;
+}
+
+fn statx(fd: std.posix.fd_t) !std.os.linux.Statx {
     var stx = std.mem.zeroes(std.os.linux.Statx);
     const rcx = std.os.linux.statx(
         fd,
