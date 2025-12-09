@@ -30,6 +30,9 @@ pub fn main() !void {
     const answer_file_fd = try open_file("answer", "txt", num_pairs);
     defer std.posix.close(answer_file_fd);
 
+    const answer_file_bin_fd = try open_file("answer", "bin", num_pairs);
+    defer std.posix.close(answer_file_bin_fd);
+
     var random: Random = .init(seed);
     const num_clusters = blk: {
         var c = num_pairs / cluster_size;
@@ -69,10 +72,12 @@ pub fn main() !void {
             average += dist;
 
             try write_file(answer_file_fd, "{d}\n", .{dist});
+            try write_file_bin(answer_file_bin_fd, @ptrCast(&dist));
         }
     }
     average /= @floatFromInt(num_pairs);
-    try write_file(answer_file_fd, "Average: {d} of {d} pairs", .{ average, num_pairs });
+    try write_file(answer_file_fd, "{d}", .{average});
+    try write_file_bin(answer_file_bin_fd, @ptrCast(&average));
     std.log.info("Average: {d} of {d} pairs", .{ average, num_pairs });
 }
 
@@ -112,6 +117,16 @@ fn write_file(
         return e;
     };
     _ = std.posix.write(fd, line) catch |e| {
+        std.log.err("Cannot write to the file: {t}", .{e});
+        return e;
+    };
+}
+
+fn write_file_bin(
+    fd: std.posix.fd_t,
+    bytes: []const u8,
+) !void {
+    _ = std.posix.write(fd, bytes) catch |e| {
         std.log.err("Cannot write to the file: {t}", .{e});
         return e;
     };
