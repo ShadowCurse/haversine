@@ -126,7 +126,7 @@ test "sin_accuracy" {
 
         const original = @sin(value);
         const custom = sin(value);
-        const diff = custom - original;
+        const diff = @abs(custom - original);
         max_diff = @max(max_diff, diff);
     }
     std.debug.print("sin max_diff: {d:.24}\n", .{max_diff});
@@ -145,7 +145,7 @@ test "cos_accuracy" {
 
         const original = @cos(value);
         const custom = cos(value);
-        const diff = custom - original;
+        const diff = @abs(custom - original);
         max_diff = @max(max_diff, diff);
     }
     std.debug.print("cos max_diff: {d:.24}\n", .{max_diff});
@@ -164,7 +164,7 @@ test "asin_accuracy" {
 
         const original = std.math.asin(value);
         const custom = asin(value);
-        const diff = custom - original;
+        const diff = @abs(custom - original);
         max_diff = @max(max_diff, diff);
     }
     std.debug.print("asin max_diff: {d:.24}\n", .{max_diff});
@@ -183,7 +183,7 @@ test "sqrt_accuracy" {
 
         const original = @sqrt(value);
         const custom = sqrt(value);
-        const diff = custom - original;
+        const diff = @abs(custom - original);
         max_diff = @max(max_diff, diff);
     }
     std.debug.print("sqrt max_diff: {d:.24}\n", .{max_diff});
