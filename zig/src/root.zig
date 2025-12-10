@@ -15,7 +15,12 @@ fn asin(input: f64) f64 {
 }
 
 fn sqrt(input: f64) f64 {
-    return input;
+    const result = asm volatile (
+        \\ sqrtsd %[ret], %[input]
+        : [ret] "={xmm0}" (-> f64),
+        : [input] "{xmm0}" (input),
+    );
+    return result;
 }
 
 pub fn radians_from_degrees(degrees: f64) f64 {
