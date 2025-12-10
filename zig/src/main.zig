@@ -16,13 +16,8 @@ pub const prof = profiler.Measurements("main", &.{
 
 pub fn main() !void {
     profiler.start();
+    defer profiler.print(&.{ prof, Json.prof });
 
-    try main2();
-
-    profiler.print(&.{ prof, Json.prof });
-}
-
-pub fn main2() !void {
     const prof_point = prof.start(@src());
     defer prof.end(prof_point);
 
