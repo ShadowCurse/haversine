@@ -56,19 +56,24 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
 
-    const mod_tests = b.addTest(.{
+    const mod_unit_tests = b.addTest(.{
+        .name = "mod_unit_tests",
         .root_module = h_mod,
         .filters = b.args orelse &.{},
     });
-    const run_mod_tests = b.addRunArtifact(mod_tests);
+    b.installArtifact(mod_unit_tests);
+    const run_mod_tests = b.addRunArtifact(mod_unit_tests);
 
-    const exe_tests = b.addTest(.{
+    const exe_unit_tests = b.addTest(.{
+        .name = "exe_unit_tests",
         .root_module = exe.root_module,
         .filters = b.args orelse &.{},
     });
-    const run_exe_tests = b.addRunArtifact(exe_tests);
+    b.installArtifact(exe_unit_tests);
+    const run_unit_tests = b.addRunArtifact(exe_unit_tests);
 
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
-    test_step.dependOn(&run_exe_tests.step);
+    test_step.dependOn(&run_unit_tests.step);
+    test_step.dependOn(b.getInstallStep());
 }
