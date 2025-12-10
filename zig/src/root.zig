@@ -3,11 +3,30 @@ const std = @import("std");
 pub const EARTH_RADIUS = 6372.8;
 
 fn sin(input: f64) f64 {
-    return input;
+    const A = -1.0 / 6.0;
+    const B = 1.0 / 120.0;
+    const C = -1.0 / 5040.0;
+    const D = 1.0 / 362880.0;
+    const E = -1.0 / 39916800.0;
+    const x2 = input * input;
+    // Use Taylor series with max power of x^11
+    // The formula with carried out terms is
+    // x * (x^2 * (x^2 * (x^2 * (x^2 * (E * x^2 + D) + C) + B) + A) + 1)
+    var result = x2 * E + D;
+    result *= x2;
+    result += C;
+    result *= x2;
+    result += B;
+    result *= x2;
+    result += A;
+    result *= x2;
+    result += 1.0;
+    result *= input;
+    return result;
 }
 
 fn cos(input: f64) f64 {
-    return input;
+    return sin(input + std.math.pi / 2.0);
 }
 
 fn asin(input: f64) f64 {
